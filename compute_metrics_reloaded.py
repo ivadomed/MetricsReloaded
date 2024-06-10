@@ -82,7 +82,7 @@ def get_parser():
                              'see: https://metricsreloaded.readthedocs.io/en/latest/reference/metrics/metrics.html.')
     parser.add_argument('-output', type=str, default='metrics.csv', required=False,
                         help='Path to the output CSV file to save the metrics. Default: metrics.csv')
-    parser.add_argument('--mask-type', type=str, default='chunks', required=False,
+    parser.add_argument('-mask-type', type=str, default='chunks', required=False,
                         help='Type of the labels in the images. Options: [chunks, stitched]')
 
     return parser
@@ -236,14 +236,12 @@ def main():
         prediction_files, reference_files = get_images_in_folder(args.prediction, args.reference)
 
         if args.mask_type == 'chunks':
-            # stack the individual predictions and references into a single 3D volume
-            for i in range(len(prediction_files)):
 
-                # get the subject, session, and chunk identifiers from the path
-                subjects_sessions = [find_subject_session_chunk_in_path(f)[0] for f in prediction_files if find_subject_session_chunk_in_path(f)]
+            # get the subject, session, and chunk identifiers from the path
+            subjects_sessions = [find_subject_session_chunk_in_path(f)[0] for f in prediction_files if find_subject_session_chunk_in_path(f)]
+            subjects_sessions = list(set(subjects_sessions))
 
             for sub_ses in subjects_sessions:
-
                 preds_per_sub_ses = [f for f in prediction_files if sub_ses in f]
                 refs_per_sub_ses = [f for f in reference_files if sub_ses in f]
 
@@ -283,13 +281,11 @@ def main():
                 ref_fname = os.path.join(os.path.dirname(refs_per_sub_ses[0]), f'{sub_ses}_refs_stack.nii.gz')
 
                 metrics_dict = {'reference': ref_fname, 'prediction': pred_fname}
+                # Compute metrics for each subject
                 metrics_dict = compute_metrics_single_subject(preds_stacked, refs_stacked, args.metrics, metrics_dict)
+
+                # append the dictionary to the output list
                 output_list.append(metrics_dict)
-                print(output_list)
-                exit()
-
-            exit()
-
 
         elif args.mask_type == 'stitched':
             # Loop over the subjects
@@ -297,7 +293,6 @@ def main():
 
                 # append entry into the output_list to store the metrics for the current subject
                 metrics_dict = {'reference': reference_files[i], 'prediction': prediction_files[i]}
-
                 # Compute metrics for each subject
                 metrics_dict = compute_metrics_single_subject(prediction_files[i], reference_files[i], args.metrics, metrics_dict)
 
