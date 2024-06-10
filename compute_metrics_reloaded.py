@@ -41,8 +41,7 @@ import argparse
 import numpy as np
 import nibabel as nib
 import pandas as pd
-from multiprocessing import Pool, cpu_count
-from functools import partial
+import re
 
 from MetricsReloaded.metrics.pairwise_measures import BinaryPairwiseMeasures as BPM
 
@@ -83,8 +82,8 @@ def get_parser():
                              'see: https://metricsreloaded.readthedocs.io/en/latest/reference/metrics/metrics.html.')
     parser.add_argument('-output', type=str, default='metrics.csv', required=False,
                         help='Path to the output CSV file to save the metrics. Default: metrics.csv')
-    parser.add_argument('-jobs', type=int, default=cpu_count()//8, required=False,
-                        help='Number of CPU cores to use in parallel. Default: 1')
+    parser.add_argument('--mask-type', type=str, default='chunks', required=False,
+                        help='Type of the labels in the images. Options: [chunks, stitched]')
 
     return parser
 
@@ -126,25 +125,13 @@ def get_images_in_folder(prediction, reference):
     return prediction_files, reference_files
 
 
-def compute_metrics_single_subject(prediction, reference, metrics):
+def compute_metrics_single_subject(prediction_data, reference_data, metrics, metrics_dict):
     """
     Compute MetricsReloaded metrics for a single subject
-    :param prediction: path to the nifti image with the prediction
-    :param reference: path to the nifti image with the reference (ground truth)
+    :param prediction: numpy array of the prediction mask
+    :param reference: numpy array of the reference mask (ground truth)
     :param metrics: list of metrics to compute
     """
-    # load nifti images
-    print(f'Processing...')
-    print(f'\tPrediction: {os.path.basename(prediction)}')
-    print(f'\tReference: {os.path.basename(reference)}')
-    prediction_data = load_nifti_image(prediction)
-    reference_data = load_nifti_image(reference)
-
-    # check whether the images have the same shape and orientation
-    if prediction_data.shape != reference_data.shape:
-        raise ValueError(f'The prediction and reference (ground truth) images must have the same shape. '
-                         f'The prediction image has shape {prediction_data.shape} and the ground truth image has '
-                         f'shape {reference_data.shape}.')
 
     # get all unique labels (classes)
     # for example, for nnunet region-based segmentation, spinal cord has label 1, and lesions have label 2
@@ -155,9 +142,6 @@ def compute_metrics_single_subject(prediction, reference, metrics):
 
     # Get the unique labels that are present in the reference OR prediction images
     unique_labels = np.unique(np.concatenate((unique_labels_reference, unique_labels_prediction)))
-
-    # append entry into the output_list to store the metrics for the current subject
-    metrics_dict = {'reference': reference, 'prediction': prediction}
 
     # loop over all unique labels, e.g., voxels with values 1, 2, ...
     # by doing this, we can compute metrics for each label separately, e.g., separately for spinal cord and lesions
@@ -175,6 +159,8 @@ def compute_metrics_single_subject(prediction, reference, metrics):
         # add the metrics to the output dictionary
         metrics_dict[label] = dict_seg
 
+        if label == max(unique_labels):
+            break       # break to loop to avoid processing the background label ("else" block)
     # Special case when both the reference and prediction images are empty
     else:
         label = 1
