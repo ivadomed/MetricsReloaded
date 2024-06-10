@@ -218,11 +218,19 @@ def build_output_dataframe(output_list):
     return df
 
 
-def process_subject(prediction_file, reference_file, metrics):
+def find_subject_session_chunk_in_path(path):
     """
-    Wrapper function to process a single subject.
+    Extracts subject and session identifiers from the given path.
+    :param path: Input path containing subject and session identifiers.
+    :return: Extracted subject and session identifiers or None if not found.
     """
-    return compute_metrics_single_subject(prediction_file, reference_file, metrics)
+    # pattern = r'.*_(sub-m\d{6})_(ses-\d{8}).*_(chunk-\d{1})_.*'
+    pattern = r'.*_(sub-m\d{6}_ses-\d{8}).*_(chunk-\d{1})_.*'
+    match = re.search(pattern, path)
+    if match:
+        return match.group(1), match.group(2)
+    else:
+        return None, None, None
 
 
 def main():
