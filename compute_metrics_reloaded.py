@@ -244,22 +244,82 @@ def main():
     # Print the metrics to be computed
     print(f'Computing metrics: {args.metrics}')
 
-    print(f'Using {args.jobs} CPU cores in parallel ...')
-
     # Args.prediction and args.reference are paths to folders with multiple nii.gz files (i.e., MULTIPLE subjects)
     if os.path.isdir(args.prediction) and os.path.isdir(args.reference):
         # Get all files in the directories
         prediction_files, reference_files = get_images_in_folder(args.prediction, args.reference)
 
-        # Use multiprocessing to parallelize the computation
-        with Pool(args.jobs) as pool:
-            # Create a partial function to pass the metrics argument to the process_subject function
-            func = partial(process_subject, metrics=args.metrics)
-            # Compute metrics for each subject in parallel
-            results = pool.starmap(func, zip(prediction_files, reference_files))
+        if args.mask_type == 'chunks':
+            # stack the individual predictions and references into a single 3D volume
+            for i in range(len(prediction_files)):
 
-            # Collect the results
-            output_list.extend(results)
+                # get the subject, session, and chunk identifiers from the path
+                subjects_sessions = [find_subject_session_chunk_in_path(f)[0] for f in prediction_files if find_subject_session_chunk_in_path(f)]
+
+            for sub_ses in subjects_sessions:
+
+                preds_per_sub_ses = [f for f in prediction_files if sub_ses in f]
+                refs_per_sub_ses = [f for f in reference_files if sub_ses in f]
+
+                preds_stack, refs_stack = [], []
+                for pred, ref in zip(preds_per_sub_ses, refs_per_sub_ses):
+                    # load nifti images
+                    prediction_data = load_nifti_image(pred)
+                    reference_data = load_nifti_image(ref)
+
+                    # check whether the images have the same shape and orientation
+                    if prediction_data.shape != reference_data.shape:
+                        raise ValueError(f'The prediction and reference (ground truth) images must have the same shape. '
+                                         f'The prediction image has shape {prediction_data.shape} and the ground truth image has '
+                                         f'shape {reference_data.shape}.')
+
+                    preds_stack.append(prediction_data)
+                    refs_stack.append(reference_data)
+
+                # min_shape = np.min([pred.shape for pred in preds_stack], axis=0)
+                max_shape = np.max([pred.shape for pred in preds_stack], axis=0)
+                max_shape_ref = np.max([ref.shape for ref in refs_stack], axis=0)
+
+                assert max_shape[0] == max_shape_ref[0], "The images must have the same shape at dim[0]"
+                assert max_shape[1] == max_shape_ref[1], "The images must have the same shape at dim[1]"
+                assert max_shape[2] == max_shape_ref[2], "The images must have the same shape at dim[2]"
+
+                # pad the images to the same shape
+                preds_stack = [np.pad(pred, ((0, max_shape[0] - pred.shape[0]), (0, max_shape[1] - pred.shape[1]), (0, max_shape[2] - pred.shape[2]))) for pred in preds_stack]
+                refs_stack = [np.pad(ref, ((0, max_shape[0] - ref.shape[0]), (0, max_shape[1] - ref.shape[1]), (0, max_shape[2] - ref.shape[2]))) for ref in refs_stack]
+
+                # stack the images
+                preds_stacked = np.stack(preds_stack, axis=-1)
+                refs_stacked = np.stack(refs_stack, axis=-1)
+
+                # create a new file name for reference and prediction
+                pred_fname = os.path.join(os.path.dirname(preds_per_sub_ses[0]), f'{sub_ses}_preds_stack.nii.gz')
+                ref_fname = os.path.join(os.path.dirname(refs_per_sub_ses[0]), f'{sub_ses}_refs_stack.nii.gz')
+
+                metrics_dict = {'reference': ref_fname, 'prediction': pred_fname}
+                metrics_dict = compute_metrics_single_subject(preds_stacked, refs_stacked, args.metrics, metrics_dict)
+                output_list.append(metrics_dict)
+                print(output_list)
+                exit()
+
+            exit()
+
+
+        elif args.mask_type == 'stitched':
+            # Loop over the subjects
+            for i in range(len(prediction_files)):
+
+                # append entry into the output_list to store the metrics for the current subject
+                metrics_dict = {'reference': reference_files[i], 'prediction': prediction_files[i]}
+
+                # Compute metrics for each subject
+                metrics_dict = compute_metrics_single_subject(prediction_files[i], reference_files[i], args.metrics, metrics_dict)
+
+                # Append the output dictionary (representing a single reference-prediction pair per subject) to the
+                # output_list
+                output_list.append(metrics_dict)
+
+    # Args.prediction and args.reference are paths nii.gz files from a SINGLE subject
     else:
         metrics_dict = compute_metrics_single_subject(args.prediction, args.reference, args.metrics)
         # Append the output dictionary (representing a single reference-prediction pair per subject) to the output_list
