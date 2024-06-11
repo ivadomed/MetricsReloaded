@@ -290,10 +290,14 @@ def main():
             # Loop over the subjects
             for i in tqdm(range(len(reference_files)), desc='Computing metrics for each subject'):
 
+                # Load nifti images
+                prediction_data = load_nifti_image(prediction_files[i])
+                reference_data = load_nifti_image(reference_files[i])
+
                 # append entry into the output_list to store the metrics for the current subject
                 metrics_dict = {'reference': reference_files[i], 'prediction': prediction_files[i]}
                 # Compute metrics for each subject
-                metrics_dict = compute_metrics_single_subject(prediction_files[i], reference_files[i], args.metrics, metrics_dict)
+                metrics_dict = compute_metrics_single_subject(prediction_data, reference_data, args.metrics, metrics_dict)
 
                 # Append the output dictionary (representing a single reference-prediction pair per subject) to the
                 # output_list
