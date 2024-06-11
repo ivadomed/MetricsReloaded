@@ -6,7 +6,7 @@ Metrics Reloaded
 
 A Python implementation of `Metrics Reloaded <https://openreview.net/forum?id=24kBqy8rcB_>`__ - A new recommendation framework for biomedical image analysis validation.
 
-ℹ️ This is a fork of the `Project-MONAI/MetricsReloaded <https://github.com/Project-MONAI/MetricsReloaded>`__ repo. We created this fork because `the original repo <https://github.com/Project-MONAI/MetricsReloaded>`__ seems to be unfortunately no longer maintained (last commit on `Sep 6, 2023 <https://github.com/Project-MONAI/MetricsReloaded/commits/main/>`__).
+ℹ️ This is a fork of the `Project-MONAI/MetricsReloaded <https://github.com/Project-MONAI/MetricsReloaded>`__ repo. We created this fork because `the original repo <https://github.com/Project-MONAI/MetricsReloaded>`__ is no longer maintained (last commit on `Sep 6, 2023 <https://github.com/Project-MONAI/MetricsReloaded/commits/main/>`__).
 
 ℹ️ In this fork, we have added some additional metrics, such as `relative volume error (RVE) <https://github.com/ivadomed/MetricsReloaded/blob/713892a053e23a40a8bd88aa72a261409d536ba8/MetricsReloaded/metrics/pairwise_measures.py#L897>`__, `lesion-wise F1 Score <https://github.com/ivadomed/MetricsReloaded/blob/713892a053e23a40a8bd88aa72a261409d536ba8/MetricsReloaded/metrics/pairwise_measures.py#L1227>`__, `lesion-wise Sensitivity <https://github.com/ivadomed/MetricsReloaded/blob/713892a053e23a40a8bd88aa72a261409d536ba8/MetricsReloaded/metrics/pairwise_measures.py#L1273>`__, and `lesion-wise positive predictive value (PPV) <https://github.com/ivadomed/MetricsReloaded/blob/713892a053e23a40a8bd88aa72a261409d536ba8/MetricsReloaded/metrics/pairwise_measures.py#L1252>`__ and fixed some bugs (e.g., `#1 <https://github.com/ivadomed/MetricsReloaded/pull/1>`__)
 
