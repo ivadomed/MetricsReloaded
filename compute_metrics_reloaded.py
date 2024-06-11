@@ -301,7 +301,13 @@ def main():
 
     # Args.prediction and args.reference are paths nii.gz files from a SINGLE subject
     else:
-        metrics_dict = compute_metrics_single_subject(args.prediction, args.reference, args.metrics)
+        # Load nifti images
+        prediction_data = load_nifti_image(args.prediction)
+        reference_data = load_nifti_image(args.reference)
+
+        metrics_dict = {'reference': args.reference, 'prediction': args.prediction}
+        metrics_dict = compute_metrics_single_subject(prediction_data, reference_data, args.metrics, metrics_dict)
+
         # Append the output dictionary (representing a single reference-prediction pair per subject) to the output_list
         output_list.append(metrics_dict)
 
