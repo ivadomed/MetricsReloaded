@@ -42,6 +42,7 @@ import numpy as np
 import nibabel as nib
 import pandas as pd
 import re
+from tqdm import tqdm
 
 from MetricsReloaded.metrics.pairwise_measures import BinaryPairwiseMeasures as BPM
 
@@ -147,7 +148,6 @@ def compute_metrics_single_subject(prediction_data, reference_data, metrics, met
     # by doing this, we can compute metrics for each label separately, e.g., separately for spinal cord and lesions
     for label in unique_labels:
         # create binary masks for the current label
-        print(f'\tLabel {label}')
         prediction_data_label = np.array(prediction_data == label, dtype=float)
         reference_data_label = np.array(reference_data == label, dtype=float)
 
@@ -164,7 +164,6 @@ def compute_metrics_single_subject(prediction_data, reference_data, metrics, met
     # Special case when both the reference and prediction images are empty
     else:
         label = 1
-        print(f'\tLabel {label} -- both the reference and prediction are empty')
         bpm = BPM(prediction_data, reference_data, measures=metrics)
         dict_seg = bpm.to_dict_meas()
 
@@ -241,7 +240,7 @@ def main():
             subjects_sessions = [find_subject_session_chunk_in_path(f)[0] for f in prediction_files if find_subject_session_chunk_in_path(f)]
             subjects_sessions = list(set(subjects_sessions))
 
-            for sub_ses in subjects_sessions:
+            for sub_ses in tqdm(subjects_sessions, desc='Computing metrics for each subject'):
                 preds_per_sub_ses = [f for f in prediction_files if sub_ses in f]
                 refs_per_sub_ses = [f for f in reference_files if sub_ses in f]
 
@@ -289,7 +288,7 @@ def main():
 
         elif args.mask_type == 'stitched':
             # Loop over the subjects
-            for i in range(len(prediction_files)):
+            for i in tqdm(range(len(reference_files)), desc='Computing metrics for each subject'):
 
                 # append entry into the output_list to store the metrics for the current subject
                 metrics_dict = {'reference': reference_files[i], 'prediction': prediction_files[i]}
