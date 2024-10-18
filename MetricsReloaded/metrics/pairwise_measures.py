@@ -1257,6 +1257,9 @@ class BinaryPairwiseMeasures(object):
         elif not self.flag_empty_ref and self.flag_empty_pred:
             # Reference is not empty, prediction is empty --> model did not learn correctly (it's false negative)
             return 0.0
+        elif self.flag_empty_ref and not self.flag_empty_pred:
+            # Reference is empty, prediction is not empty --> model did not learn correctly (it's false positive)
+            return 0.0
         # if the predction is not empty and ref is empty, it's false positive
         # if both are not empty, it's true positive
         else:
@@ -1284,6 +1287,9 @@ class BinaryPairwiseMeasures(object):
             return 1.0
         elif not self.flag_empty_ref and self.flag_empty_pred:
             # Reference is not empty, prediction is empty --> model did not learn correctly (it's false negative)
+            return 0.0
+        elif self.flag_empty_ref and not self.flag_empty_pred:
+            # Reference is empty, prediction is not empty --> model did not learn correctly (it's false positive)
             return 0.0
         # if the predction is not empty and ref is empty, it's false positive
         # if both are not empty, it's true positive
