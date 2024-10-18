@@ -1207,21 +1207,27 @@ class BinaryPairwiseMeasures(object):
         """
         tp, fp, fn = 0, 0, 0
 
-        # For each true lesion, check if there is at least one overlapping voxel. This determines true positives and
-        # false negatives (unpredicted lesions)
-        labeled_ground_truth, num_lesions = ndimage.label(truth.astype(bool))
-        for idx_lesion in range(1, num_lesions+1):
+        # For each true lesion, check if at least 10% of the lesion voxels overlap with the prediction.
+        # This determines true positives and false negatives (unpredicted lesions)
+        labeled_ground_truth, num_truth_lesions = ndimage.label(truth.astype(bool))
+        for idx_lesion in range(1, num_truth_lesions + 1):
             lesion = labeled_ground_truth == idx_lesion
-            lesion_pred_sum = lesion + prediction
-            if(np.max(lesion_pred_sum) > 1):
+            num_truth_lesion_voxels = np.sum(lesion)  # Total number of voxels in the GT lesion
+            overlapping_voxels = np.sum(lesion * prediction)  # Number of GT voxels that overlap with the prediction
+            # Check if at least 10% of the lesion voxels overlap with the prediction
+            if overlapping_voxels / num_truth_lesion_voxels >= 0.1:
                 tp += 1
             else:
                 fn += 1
 
         # For each predicted lesion, check if there is at least one overlapping voxel in the ground truth.
-        labaled_prediction, num_pred_lesions = ndimage.label(prediction.astype(bool))
+        labeled_prediction, num_pred_lesions = ndimage.label(prediction.astype(bool))
         for idx_lesion in range(1, num_pred_lesions+1):
-            lesion = labaled_prediction == idx_lesion
+            lesion = labeled_prediction == idx_lesion
+            # num_pred_lesion_voxels = np.sum(lesion)
+            # overlapping_voxels = np.sum(lesion & truth)
+            # if overlapping_voxels / num_pred_lesion_voxels < 0.1:
+            #     fp += 1
             lesion_pred_sum = lesion + truth
             if(np.max(lesion_pred_sum) <= 1):  # No overlap
                 fp += 1
