@@ -1295,7 +1295,7 @@ class BinaryPairwiseMeasures(object):
         # if both are not empty, it's true positive
         else:
             tp, fp, _ = self.lesion_wise_tp_fp_fn(self.ref, self.pred)
-            # ppv = 1.0
+            ppv = 1.0
 
             # Compute ppv
             denom = tp + fp
