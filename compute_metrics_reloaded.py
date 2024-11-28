@@ -247,7 +247,7 @@ def main():
         raise ValueError(f'If used, both -ref-map and -pred-map must be provided.')
     
     # Load JSON mapping if provided
-    if any((args.ref_map is None, args.pred_map is None)):
+    if not any((args.ref_map is None, args.pred_map is None)):
         # Load JSON files and create a dictionary
         with open(args.ref_map, "r") as file:
             ref_map = json.load(file)
