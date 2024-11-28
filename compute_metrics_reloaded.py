@@ -131,7 +131,7 @@ def get_images_in_folder(prediction, reference):
     return prediction_files, reference_files
 
 
-def compute_metrics_single_subject(prediction, reference, metrics, ref_map, pred_map):
+def compute_metrics_single_subject(prediction, reference, metrics, ref_map=None, pred_map=None):
     """
     Compute MetricsReloaded metrics for a single subject
     :param prediction: path to the nifti image with the prediction
@@ -227,7 +227,7 @@ def build_output_dataframe(output_list):
     return df
 
 
-def process_subject(prediction_file, reference_file, metrics, ref_map, pred_map):
+def process_subject(prediction_file, reference_file, metrics, ref_map=None, pred_map=None):
     """
     Wrapper function to process a single subject.
     """
@@ -283,7 +283,7 @@ def main():
             # Collect the results
             output_list.extend(results)
     else:
-        metrics_dict = compute_metrics_single_subject(args.prediction, args.reference, args.metrics, args.ref_map, args.pred_map)
+        metrics_dict = compute_metrics_single_subject(args.prediction, args.reference, args.metrics, ref_map, pred_map)
         # Append the output dictionary (representing a single reference-prediction pair per subject) to the output_list
         output_list.append(metrics_dict)
 
