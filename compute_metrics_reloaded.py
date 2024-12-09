@@ -20,7 +20,13 @@ similarity coefficient (DSC) and Normalized surface distance (NSD), use:
         -reference sub-001_T2w_seg.nii.gz
         -prediction sub-001_T2w_prediction.nii.gz
         -metrics dsc nsd
-
+For a lesion-wise evaluation with a minimum 10% overlap between GT and pred masks, use:
+    python compute_metrics_reloaded.py
+        -reference sub-001_T2w_seg.nii.gz
+        -prediction sub-001_T2w_prediction.nii.gz
+        -metrics dsc nsd rel_vol_error lesion_ppv lesion_sensitivity lesion_f1_score ref_count pred_count
+        --overlap-ratio 0.1
+        
 See https://arxiv.org/abs/2206.01653v5 for nice figures explaining the metrics!
 
 The output is saved to a CSV file, for example:
