@@ -446,6 +446,7 @@ class TestGetImages(unittest.TestCase):
         """
         self.create_temp_file(self.pred_dir.name, "sub-01_acq-01_run-01_pred.nii.gz")
         self.create_temp_file(self.ref_dir.name, "sub-01_acq-01_run-01_ref.nii.gz")
+        # The following file will not be included in the lists below as there is no matching reference (GT) file
         self.create_temp_file(self.pred_dir.name, "sub-02_acq-02_run-02_pred.nii.gz")
 
         pred_files, ref_files = get_images(self.pred_dir.name, self.ref_dir.name)
