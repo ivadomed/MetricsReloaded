@@ -133,7 +133,7 @@ def fetch_participant_id_acq_id_run_id(filename_path, prefix='sub-'):
     return participant_id, acq_id, run_id
 
 
-def get_images_in_folder(prediction, reference):
+def get_images(prediction, reference):
     """
     Get all files (predictions and references/ground truths) in the input directories.
     The prediction and reference files are matched based on the participant_id, acq_id, and run_id.
@@ -276,7 +276,7 @@ def main():
     # Args.prediction and args.reference are paths to folders with multiple nii.gz files (i.e., MULTIPLE subjects)
     if os.path.isdir(args.prediction) and os.path.isdir(args.reference):
         # Get all files in the directories
-        prediction_files, reference_files = get_images_in_folder(args.prediction, args.reference)
+        prediction_files, reference_files = get_images(args.prediction, args.reference)
 
         # Use multiprocessing to parallelize the computation
         with Pool(args.jobs) as pool:
