@@ -145,6 +145,11 @@ def get_images(prediction, reference):
     prediction_files = [os.path.join(prediction, f) for f in os.listdir(prediction) if f.endswith('.nii.gz')]
     reference_files = [os.path.join(reference, f) for f in os.listdir(reference) if f.endswith('.nii.gz')]
 
+    if not prediction_files:
+        raise FileNotFoundError(f'No prediction files found in {prediction}.')
+    if not reference_files:
+        raise FileNotFoundError(f'No reference (ground truths) files found in {reference}.')
+
     # Create dataframe for prediction_files with participant_id, acq_id, run_id
     df_pred = pd.DataFrame(prediction_files, columns=['filename'])
     df_pred['participant_id'], df_pred['acq_id'], df_pred['run_id'] = zip(*df_pred['filename'].apply(fetch_participant_id_acq_id_run_id))
