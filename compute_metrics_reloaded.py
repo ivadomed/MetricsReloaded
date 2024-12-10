@@ -162,7 +162,7 @@ def get_images(prediction, reference):
     df = pd.merge(df_pred, df_ref, on=['participant_id', 'acq_id', 'run_id'], how='outer', suffixes=('_pred', '_ref'))
     # Drop 'participant_id', 'acq_id', 'run_id'
     df.drop(['participant_id', 'acq_id', 'run_id'], axis=1, inplace=True)
-    # Drop rows with NaN values
+    # Drop rows with NaN values. In other words, keep only the rows where both prediction and reference files exist
     df.dropna(inplace=True)
 
     prediction_files = df['filename_pred'].tolist()
