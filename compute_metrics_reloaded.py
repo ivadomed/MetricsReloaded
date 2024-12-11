@@ -120,6 +120,9 @@ def fetch_participant_id_acq_id_run_id(filename_path, prefix='sub-'):
     participant = re.search(f'{prefix}(.*?)[_/]', filename_path)     # [_/] means either underscore or slash
     participant_id = participant.group(0)[:-1] if participant else ""   # [:-1] removes the last underscore or slash
 
+    session = re.search('ses-(.*?)[_/]', filename_path)     # [_/] means either underscore or slash
+    session_id = session.group(0)[:-1] if session else ""   # [:-1] removes the last underscore or slash
+
     acquisition = re.search('acq-(.*?)[_/]', filename_path)     # [_/] means either underscore or slash
     acq_id = acquisition.group(0)[:-1] if acquisition else ""   # [:-1] removes the last underscore or slash
 
@@ -130,7 +133,7 @@ def fetch_participant_id_acq_id_run_id(filename_path, prefix='sub-'):
     # . - match any character (except newline)
     # *? - match the previous element as few times as possible (zero or more times)
 
-    return participant_id, acq_id, run_id
+    return participant_id, session_id, acq_id, run_id
 
 
 def get_images(prediction, reference):
@@ -152,16 +155,16 @@ def get_images(prediction, reference):
 
     # Create dataframe for prediction_files with participant_id, acq_id, run_id
     df_pred = pd.DataFrame(prediction_files, columns=['filename'])
-    df_pred['participant_id'], df_pred['acq_id'], df_pred['run_id'] = zip(*df_pred['filename'].apply(fetch_participant_id_acq_id_run_id))
+    df_pred['participant_id'], df_pred['session_id'], df_pred['acq_id'], df_pred['run_id'] = zip(*df_pred['filename'].apply(fetch_participant_id_acq_id_run_id))
 
     # Create dataframe for reference_files with participant_id, acq_id, run_id
     df_ref = pd.DataFrame(reference_files, columns=['filename'])
-    df_ref['participant_id'], df_ref['acq_id'], df_ref['run_id'] = zip(*df_ref['filename'].apply(fetch_participant_id_acq_id_run_id))
+    df_ref['participant_id'], df_ref['session_id'], df_ref['acq_id'], df_ref['run_id'] = zip(*df_ref['filename'].apply(fetch_participant_id_acq_id_run_id))
 
     # Merge the two dataframes on participant_id, acq_id, run_id
-    df = pd.merge(df_pred, df_ref, on=['participant_id', 'acq_id', 'run_id'], how='outer', suffixes=('_pred', '_ref'))
+    df = pd.merge(df_pred, df_ref, on=['participant_id', 'session_id', 'acq_id', 'run_id'], how='outer', suffixes=('_pred', '_ref'))
     # Drop 'participant_id', 'acq_id', 'run_id'
-    df.drop(['participant_id', 'acq_id', 'run_id'], axis=1, inplace=True)
+    df.drop(['participant_id', 'session_id', 'acq_id', 'run_id'], axis=1, inplace=True)
     # Drop rows with NaN values. In other words, keep only the rows where both prediction and reference files exist
     df.dropna(inplace=True)
 
