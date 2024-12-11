@@ -13,6 +13,7 @@ Example usage (multiple reference-prediction pairs, e.g., multiple subjects in t
     python compute_metrics_reloaded.py
         -reference /path/to/reference
         -prediction /path/to/prediction
+NOTE: The prediction and reference files are matched based on the participant_id, acq_id, and run_id.
 
 The metrics to be computed can be specified using the `-metrics` argument. For example, to compute only the Dice
 similarity coefficient (DSC) and Normalized surface distance (NSD), use:
@@ -37,6 +38,7 @@ Authors: Jan Valosek, Naga Karthik
 
 
 import os
+import re
 import argparse
 import numpy as np
 import nibabel as nib
@@ -103,9 +105,46 @@ def load_nifti_image(file_path):
     return nifti_image.get_fdata()
 
 
-def get_images_in_folder(prediction, reference):
+def fetch_bids_compatible_keys(filename_path, prefix='sub-'):
     """
-    Get all files (predictions and references/ground truths) in the input directories
+    Get participant_id, session_id, acq_id, chunk_id and run_id from the input BIDS-compatible filename or file path
+    The function works both on absolute file paths as well as filenames
+    :param filename_path: input nifti filename (e.g., sub-001_ses-01_T1w.nii.gz) or file path
+    :param prefix: prefix of the participant ID in the filename (default: 'sub-')
+    (e.g., /home/user/bids/sub-001/ses-01/anat/sub-001_ses-01_T1w.nii.gz
+    :return: participant_id: participant ID (e.g., sub-001)
+    :return: session_id: session ID (e.g., ses-01)
+    :return: acq_id: acquisition ID (e.g., acq-01)
+    :return: chunk_id: chunk ID (e.g., chunk-1)
+    :return: run_id: run ID (e.g., run-01)
+    """
+
+    participant = re.search(f'{prefix}(.*?)[_/]', filename_path)     # [_/] means either underscore or slash
+    participant_id = participant.group(0)[:-1] if participant else ""   # [:-1] removes the last underscore or slash
+
+    session = re.search('ses-(.*?)[_/]', filename_path)     # [_/] means either underscore or slash
+    session_id = session.group(0)[:-1] if session else ""   # [:-1] removes the last underscore or slash
+
+    acquisition = re.search('acq-(.*?)[_/]', filename_path)     # [_/] means either underscore or slash
+    acq_id = acquisition.group(0)[:-1] if acquisition else ""   # [:-1] removes the last underscore or slash
+
+    chunk = re.search('chunk-(.*?)[_/]', filename_path)     # [_/] means either underscore or slash
+    chunk_id = chunk.group(0)[:-1] if chunk else ""   # [:-1] removes the last underscore or slash
+
+    run = re.search('run-(.*?)[_/]', filename_path)     # [_/] means either underscore or slash
+    run_id = run.group(0)[:-1] if run else ""   # [:-1] removes the last underscore or slash
+
+    # REGEX explanation
+    # . - match any character (except newline)
+    # *? - match the previous element as few times as possible (zero or more times)
+
+    return participant_id, session_id, acq_id, chunk_id, run_id
+
+
+def get_images(prediction, reference):
+    """
+    Get all files (predictions and references/ground truths) in the input directories.
+    The prediction and reference files are matched based on the participant_id, acq_id, and run_id.
     :param prediction: path to the directory with prediction files
     :param reference: path to the directory with reference (ground truth) files
     :return: list of prediction files, list of reference/ground truth files
@@ -113,15 +152,29 @@ def get_images_in_folder(prediction, reference):
     # Get all files in the directories
     prediction_files = [os.path.join(prediction, f) for f in os.listdir(prediction) if f.endswith('.nii.gz')]
     reference_files = [os.path.join(reference, f) for f in os.listdir(reference) if f.endswith('.nii.gz')]
-    # Check if the number of files in the directories is the same
-    if len(prediction_files) != len(reference_files):
-        raise ValueError(f'The number of files in the directories is different. '
-                         f'Prediction files: {len(prediction_files)}, Reference files: {len(reference_files)}')
-    print(f'Found {len(prediction_files)} files in the directories.')
-    # Sort the files
-    # NOTE: Hopefully, the files are named in the same order in both directories
-    prediction_files.sort()
-    reference_files.sort()
+
+    if not prediction_files:
+        raise FileNotFoundError(f'No prediction files found in {prediction}.')
+    if not reference_files:
+        raise FileNotFoundError(f'No reference (ground truths) files found in {reference}.')
+
+    # Create dataframe for prediction_files with participant_id, acq_id, run_id
+    df_pred = pd.DataFrame(prediction_files, columns=['filename'])
+    df_pred['participant_id'], df_pred['session_id'], df_pred['acq_id'], df_pred['chunk_id'], df_pred['run_id'] = zip(*df_pred['filename'].apply(fetch_bids_compatible_keys))
+
+    # Create dataframe for reference_files with participant_id, acq_id, run_id
+    df_ref = pd.DataFrame(reference_files, columns=['filename'])
+    df_ref['participant_id'], df_ref['session_id'], df_ref['acq_id'], df_ref['chunk_id'], df_ref['run_id'] = zip(*df_ref['filename'].apply(fetch_bids_compatible_keys))
+
+    # Merge the two dataframes on participant_id, acq_id, run_id
+    df = pd.merge(df_pred, df_ref, on=['participant_id', 'session_id', 'acq_id', 'chunk_id', 'run_id'], how='outer', suffixes=('_pred', '_ref'))
+    # Drop 'participant_id', 'acq_id', 'run_id'
+    df.drop(['participant_id', 'session_id', 'acq_id', 'chunk_id', 'run_id'], axis=1, inplace=True)
+    # Drop rows with NaN values. In other words, keep only the rows where both prediction and reference files exist
+    df.dropna(inplace=True)
+
+    prediction_files = df['filename_pred'].tolist()
+    reference_files = df['filename_ref'].tolist()
 
     return prediction_files, reference_files
 
@@ -236,7 +289,7 @@ def main():
     # Args.prediction and args.reference are paths to folders with multiple nii.gz files (i.e., MULTIPLE subjects)
     if os.path.isdir(args.prediction) and os.path.isdir(args.reference):
         # Get all files in the directories
-        prediction_files, reference_files = get_images_in_folder(args.prediction, args.reference)
+        prediction_files, reference_files = get_images(args.prediction, args.reference)
 
         # Use multiprocessing to parallelize the computation
         with Pool(args.jobs) as pool:
