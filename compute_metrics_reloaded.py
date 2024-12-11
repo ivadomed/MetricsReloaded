@@ -105,15 +105,17 @@ def load_nifti_image(file_path):
     return nifti_image.get_fdata()
 
 
-def fetch_participant_id_acq_id_run_id(filename_path, prefix='sub-'):
+def fetch_bids_compatible_keys(filename_path, prefix='sub-'):
     """
-    Get participant_id, acq_id, and run_id from the input BIDS-compatible filename or file path
+    Get participant_id, session_id, acq_id, chunk_id and run_id from the input BIDS-compatible filename or file path
     The function works both on absolute file paths as well as filenames
     :param filename_path: input nifti filename (e.g., sub-001_ses-01_T1w.nii.gz) or file path
     :param prefix: prefix of the participant ID in the filename (default: 'sub-')
     (e.g., /home/user/bids/sub-001/ses-01/anat/sub-001_ses-01_T1w.nii.gz
     :return: participant_id: participant ID (e.g., sub-001)
+    :return: session_id: session ID (e.g., ses-01)
     :return: acq_id: acquisition ID (e.g., acq-01)
+    :return: chunk_id: chunk ID (e.g., chunk-1)
     :return: run_id: run ID (e.g., run-01)
     """
 
@@ -126,6 +128,9 @@ def fetch_participant_id_acq_id_run_id(filename_path, prefix='sub-'):
     acquisition = re.search('acq-(.*?)[_/]', filename_path)     # [_/] means either underscore or slash
     acq_id = acquisition.group(0)[:-1] if acquisition else ""   # [:-1] removes the last underscore or slash
 
+    chunk = re.search('chunk-(.*?)[_/]', filename_path)     # [_/] means either underscore or slash
+    chunk_id = chunk.group(0)[:-1] if chunk else ""   # [:-1] removes the last underscore or slash
+
     run = re.search('run-(.*?)[_/]', filename_path)     # [_/] means either underscore or slash
     run_id = run.group(0)[:-1] if run else ""   # [:-1] removes the last underscore or slash
 
@@ -133,7 +138,7 @@ def fetch_participant_id_acq_id_run_id(filename_path, prefix='sub-'):
     # . - match any character (except newline)
     # *? - match the previous element as few times as possible (zero or more times)
 
-    return participant_id, session_id, acq_id, run_id
+    return participant_id, session_id, acq_id, chunk_id, run_id
 
 
 def get_images(prediction, reference):
@@ -155,16 +160,16 @@ def get_images(prediction, reference):
 
     # Create dataframe for prediction_files with participant_id, acq_id, run_id
     df_pred = pd.DataFrame(prediction_files, columns=['filename'])
-    df_pred['participant_id'], df_pred['session_id'], df_pred['acq_id'], df_pred['run_id'] = zip(*df_pred['filename'].apply(fetch_participant_id_acq_id_run_id))
+    df_pred['participant_id'], df_pred['session_id'], df_pred['acq_id'], df_pred['chunk_id'], df_pred['run_id'] = zip(*df_pred['filename'].apply(fetch_bids_compatible_keys))
 
     # Create dataframe for reference_files with participant_id, acq_id, run_id
     df_ref = pd.DataFrame(reference_files, columns=['filename'])
-    df_ref['participant_id'], df_ref['session_id'], df_ref['acq_id'], df_ref['run_id'] = zip(*df_ref['filename'].apply(fetch_participant_id_acq_id_run_id))
+    df_ref['participant_id'], df_ref['session_id'], df_ref['acq_id'], df_ref['chunk_id'], df_ref['run_id'] = zip(*df_ref['filename'].apply(fetch_bids_compatible_keys))
 
     # Merge the two dataframes on participant_id, acq_id, run_id
-    df = pd.merge(df_pred, df_ref, on=['participant_id', 'session_id', 'acq_id', 'run_id'], how='outer', suffixes=('_pred', '_ref'))
+    df = pd.merge(df_pred, df_ref, on=['participant_id', 'session_id', 'acq_id', 'chunk_id', 'run_id'], how='outer', suffixes=('_pred', '_ref'))
     # Drop 'participant_id', 'acq_id', 'run_id'
-    df.drop(['participant_id', 'session_id', 'acq_id', 'run_id'], axis=1, inplace=True)
+    df.drop(['participant_id', 'session_id', 'acq_id', 'chunk_id', 'run_id'], axis=1, inplace=True)
     # Drop rows with NaN values. In other words, keep only the rows where both prediction and reference files exist
     df.dropna(inplace=True)
 
