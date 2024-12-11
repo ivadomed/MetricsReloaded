@@ -386,8 +386,8 @@ class TestGetImages(unittest.TestCase):
         """
         Test matching files based on participant_id, acq_id, and run_id.
         """
-        self.create_temp_file(self.pred_dir.name, "sub-01_acq-01_run-01_pred.nii.gz")
-        self.create_temp_file(self.ref_dir.name, "sub-01_acq-01_run-01_ref.nii.gz")
+        self.create_temp_file(self.pred_dir.name, "sub-01_ses-01_acq-01_chunk-1_run-01_pred.nii.gz")
+        self.create_temp_file(self.ref_dir.name, "sub-01_ses-01_acq-01_chunk-1_run-01_ref.nii.gz")
 
         pred_files, ref_files = get_images(self.pred_dir.name, self.ref_dir.name)
         self.assertEqual(len(pred_files), 1)
@@ -397,38 +397,68 @@ class TestGetImages(unittest.TestCase):
         """
         Test when no files match based on the criteria.
         """
-        self.create_temp_file(self.pred_dir.name, "sub-01_acq-01_run-01_pred.nii.gz")
-        self.create_temp_file(self.ref_dir.name, "sub-02_acq-02_run-02_ref.nii.gz")
+        self.create_temp_file(self.pred_dir.name, "sub-01_ses-01_acq-01_chunk-1_run-01_pred.nii.gz")
+        self.create_temp_file(self.ref_dir.name, "sub-02_ses-01_acq-02_chunk-1_run-02_ref.nii.gz")
 
         pred_files, ref_files = get_images(self.pred_dir.name, self.ref_dir.name)
         self.assertEqual(len(pred_files), 0)
         self.assertEqual(len(ref_files), 0)
 
-    def test_acq_id_empty(self):
+    def test_ses_id_empty(self):
         """
-        Test when acq_id is empty.
+        Test when ses_id is empty.
         """
-        self.create_temp_file(self.pred_dir.name, "sub-01_run-01_pred.nii.gz")
-        self.create_temp_file(self.ref_dir.name, "sub-01_run-01_ref.nii.gz")
+        self.create_temp_file(self.pred_dir.name, "sub-01_acq-01_chunk-1_run-01_pred.nii.gz")
+        self.create_temp_file(self.ref_dir.name, "sub-01_acq-01_chunk-1_run-01_ref.nii.gz")
 
         pred_files, ref_files = get_images(self.pred_dir.name, self.ref_dir.name)
         self.assertEqual(len(pred_files), 1)
         self.assertEqual(len(ref_files), 1)
+        self.assertIn("sub-01_acq-01_chunk-1_run-01_pred.nii.gz", pred_files[0])
+        self.assertIn("sub-01_acq-01_chunk-1_run-01_ref.nii.gz", ref_files[0])
 
-    def test_run_id_empty(self):
+    def test_acq_id_empty(self):
         """
-        Test when run_id is empty in the filenames.
+        Test when acq_id is empty.
         """
-        self.create_temp_file(self.pred_dir.name, "sub-01_acq-01_pred.nii.gz")
-        self.create_temp_file(self.ref_dir.name, "sub-01_acq-01_ref.nii.gz")
+        self.create_temp_file(self.pred_dir.name, "sub-01_ses-01_chunk-1_run-01_pred.nii.gz")
+        self.create_temp_file(self.ref_dir.name, "sub-01_ses-01_chunk-1_run-01_ref.nii.gz")
+
+        pred_files, ref_files = get_images(self.pred_dir.name, self.ref_dir.name)
+        self.assertEqual(len(pred_files), 1)
+        self.assertEqual(len(ref_files), 1)
+        self.assertIn("sub-01_ses-01_chunk-1_run-01_pred.nii.gz", pred_files[0])
+        self.assertIn("sub-01_ses-01_chunk-1_run-01_ref.nii.gz", ref_files[0])
+
+    def test_chunk_id_empty(self):
+        """
+        Test when chunk_id is empty in the filenames.
+        """
+        self.create_temp_file(self.pred_dir.name, "sub-01_ses-01_acq-01_run-01_pred.nii.gz")
+        self.create_temp_file(self.ref_dir.name, "sub-01_ses-01_acq-01_run-01_ref.nii.gz")
 
         pred_files, ref_files = get_images(self.pred_dir.name, self.ref_dir.name)
 
         # Assert the matched files
         self.assertEqual(len(pred_files), 1)
         self.assertEqual(len(ref_files), 1)
-        self.assertIn("sub-01_acq-01_pred.nii.gz", pred_files[0])
-        self.assertIn("sub-01_acq-01_ref.nii.gz", ref_files[0])
+        self.assertIn("sub-01_ses-01_acq-01_run-01_pred.nii.gz", pred_files[0])
+        self.assertIn("sub-01_ses-01_acq-01_run-01_ref.nii.gz", ref_files[0])
+
+    def test_run_id_empty(self):
+        """
+        Test when run_id is empty in the filenames.
+        """
+        self.create_temp_file(self.pred_dir.name, "sub-01_ses-01_acq-01_chunk-1_pred.nii.gz")
+        self.create_temp_file(self.ref_dir.name, "sub-01_ses-01_acq-01_chunk-1_ref.nii.gz")
+
+        pred_files, ref_files = get_images(self.pred_dir.name, self.ref_dir.name)
+
+        # Assert the matched files
+        self.assertEqual(len(pred_files), 1)
+        self.assertEqual(len(ref_files), 1)
+        self.assertIn("sub-01_ses-01_acq-01_chunk-1_pred.nii.gz", pred_files[0])
+        self.assertIn("sub-01_ses-01_acq-01_chunk-1_ref.nii.gz", ref_files[0])
 
     def test_no_files(self):
         """
