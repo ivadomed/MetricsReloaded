@@ -13,7 +13,7 @@ import unittest
 import os
 import numpy as np
 import nibabel as nib
-from compute_metrics_reloaded import compute_metrics_single_subject, get_images, fetch_participant_id_acq_id_run_id
+from compute_metrics_reloaded import compute_metrics_single_subject, get_images, fetch_bids_compatible_keys
 import tempfile
 
 METRICS = ['dsc', 'fbeta', 'nsd', 'vol_diff', 'rel_vol_error', 'lesion_ppv', 'lesion_sensitivity', 'lesion_f1_score',
