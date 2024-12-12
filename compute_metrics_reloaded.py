@@ -21,7 +21,13 @@ similarity coefficient (DSC) and Normalized surface distance (NSD), use:
         -reference sub-001_T2w_seg.nii.gz
         -prediction sub-001_T2w_prediction.nii.gz
         -metrics dsc nsd
-
+For a lesion-wise evaluation with a minimum 10% overlap between GT and pred masks, use:
+    python compute_metrics_reloaded.py
+        -reference sub-001_T2w_seg.nii.gz
+        -prediction sub-001_T2w_prediction.nii.gz
+        -metrics dsc nsd rel_vol_error lesion_ppv lesion_sensitivity lesion_f1_score ref_count pred_count
+        --overlap-ratio 0.1
+        
 See https://arxiv.org/abs/2206.01653v5 for nice figures explaining the metrics!
 
 The output is saved to a CSV file, for example:
@@ -87,6 +93,9 @@ def get_parser():
                         help='Path to the output CSV file to save the metrics. Default: metrics.csv')
     parser.add_argument('-jobs', type=int, default=cpu_count()//8, required=False,
                         help='Number of CPU cores to use in parallel. Default: cpu_count()//8.')
+    parser.add_argument('--overlap-ratio', type=float, default=0.1, required=False,
+                        help='Overlap ratio between the ground-truth and prediction to be considered as true positive (TP).'
+                         'Used only in counting TPs in lesion-wise metrics. Default: 0.1')
 
     return parser
 
@@ -179,7 +188,7 @@ def get_images(prediction, reference):
     return prediction_files, reference_files
 
 
-def compute_metrics_single_subject(prediction, reference, metrics):
+def compute_metrics_single_subject(prediction, reference, metrics, overlap_ratio):
     """
     Compute MetricsReloaded metrics for a single subject
     :param prediction: path to the nifti image with the prediction
@@ -217,7 +226,7 @@ def compute_metrics_single_subject(prediction, reference, metrics):
         prediction_data_label = np.array(prediction_data == label, dtype=float)
         reference_data_label = np.array(reference_data == label, dtype=float)
 
-        bpm = BPM(prediction_data_label, reference_data_label, measures=metrics)
+        bpm = BPM(prediction_data_label, reference_data_label, measures=metrics, overlap_ratio=overlap_ratio)
         dict_seg = bpm.to_dict_meas()
         # Store info whether the reference or prediction is empty
         dict_seg['EmptyRef'] = bpm.flag_empty_ref
@@ -228,7 +237,7 @@ def compute_metrics_single_subject(prediction, reference, metrics):
     # Special case when both the reference and prediction images are empty
     else:
         label = 1
-        bpm = BPM(prediction_data, reference_data, measures=metrics)
+        bpm = BPM(prediction_data, reference_data, measures=metrics, overlap_ratio=overlap_ratio)
         dict_seg = bpm.to_dict_meas()
 
         # Store info whether the reference or prediction is empty
@@ -267,11 +276,11 @@ def build_output_dataframe(output_list):
     return df
 
 
-def process_subject(prediction_file, reference_file, metrics):
+def process_subject(prediction_file, reference_file, metrics, overlap_ratio):
     """
     Wrapper function to process a single subject.
     """
-    return compute_metrics_single_subject(prediction_file, reference_file, metrics)
+    return compute_metrics_single_subject(prediction_file, reference_file, metrics, overlap_ratio)
 
 
 def main():
@@ -294,14 +303,14 @@ def main():
         # Use multiprocessing to parallelize the computation
         with Pool(args.jobs) as pool:
             # Create a partial function to pass the metrics argument to the process_subject function
-            func = partial(process_subject, metrics=args.metrics)
+            func = partial(process_subject, metrics=args.metrics, overlap_ratio=args.overlap_ratio)
             # Compute metrics for each subject in parallel
             results = pool.starmap(func, zip(prediction_files, reference_files))
 
             # Collect the results
             output_list.extend(results)
     else:
-        metrics_dict = compute_metrics_single_subject(args.prediction, args.reference, args.metrics)
+        metrics_dict = compute_metrics_single_subject(args.prediction, args.reference, args.metrics, args.overlap_ratio)
         # Append the output dictionary (representing a single reference-prediction pair per subject) to the output_list
         output_list.append(metrics_dict)
 
