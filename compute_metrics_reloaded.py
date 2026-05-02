@@ -161,7 +161,7 @@ def compute_metrics_single_subject(prediction, reference, metrics, ref_map=None,
         unique_labels = np.unique(np.concatenate((unique_labels_reference, unique_labels_prediction)))
     else:
         # Get the unique labels that are present in the reference OR prediction images
-        unique_labels = np.unique(np.concatenate((list(ref_map.keys()), list(pred_map.keys()))))
+        unique_labels = list(ref_map.keys())
 
     # append entry into the output_list to store the metrics for the current subject
     metrics_dict = {'reference': reference, 'prediction': prediction}
@@ -236,8 +236,11 @@ def process_subject(prediction_file, reference_file, metrics, ref_map=None, pred
     """
     Wrapper function to process a single subject.
     """
-    return compute_metrics_single_subject(prediction_file, reference_file, metrics, ref_map, pred_map)
-
+    try:
+        return compute_metrics_single_subject(prediction_file, reference_file, metrics, ref_map, pred_map)
+    except Exception as e:
+        print(f"Error processing {prediction_file} and {reference_file}: {e}")
+        return {}
 
 def main():
     # parse command line arguments
