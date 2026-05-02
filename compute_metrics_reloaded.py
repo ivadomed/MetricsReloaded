@@ -105,7 +105,7 @@ def load_nifti_image(file_path):
     if not os.path.exists(file_path):
         raise FileNotFoundError(f'File {file_path} does not exist.')
     nifti_image = nib.load(file_path)
-    return nifti_image.get_fdata()
+    return np.asanyarray(nifti_image.dataobj)
 
 
 def get_images_in_folder(prediction, reference):
@@ -176,11 +176,11 @@ def compute_metrics_single_subject(prediction, reference, metrics, ref_map=None,
     for label in unique_labels:
         # create binary masks for the current label
         if not isinstance(label, str):
-            prediction_data_label = np.array(prediction_data == label, dtype=float)
-            reference_data_label = np.array(reference_data == label, dtype=float)
+            prediction_data_label = (prediction_data == label).astype(np.uint8)
+            reference_data_label = (reference_data == label).astype(np.uint8)
         else:
-            prediction_data_label = np.array(prediction_data == pred_map[label], dtype=float)
-            reference_data_label = np.array(reference_data == ref_map[label], dtype=float)
+            prediction_data_label = (prediction_data == pred_map[label]).astype(np.uint8)
+            reference_data_label = (reference_data == ref_map[label]).astype(np.uint8)
 
         bpm = BPM(prediction_data_label, reference_data_label, measures=metrics)
         dict_seg = bpm.to_dict_meas()
